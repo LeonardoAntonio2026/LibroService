@@ -9,7 +9,11 @@ import mx.edu.utez.prestamoylibros.model.Prestamo.Prestamo;
 import mx.edu.utez.prestamoylibros.repository.LectorRepository;
 import mx.edu.utez.prestamoylibros.repository.LibroRepository;
 import mx.edu.utez.prestamoylibros.repository.PrestamoRepository;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
+
+@Service
 public class LectorService {
     final LibroRepository libroRepository;
     final LectorRepository lectorRepository;
@@ -30,6 +34,6 @@ public class LectorService {
     public Prestamo[] listarLibrosPrestados(LectorDto dto){
         Lector lectorActual = lectorRepository.findById(dto.getIdLector()).orElseThrow(() -> new CustomException("No se encontro un lector"));
 
-        return prestamoRepository.findByLectorIdAndEstado(lectorActual.getId(), Estado.PRESTADO);
+        return prestamoRepository.findByLectorIdAndEstadoIn(lectorActual.getId(), List.of(Estado.PRESTADO, Estado.VENCIDO));
     }
 }

@@ -16,6 +16,6 @@ public class Lector {
     private Long id;
 
     private String nombre;
-    private Boolean activo;
-    private Boolean premium;
+    private boolean activo;
+    private boolean membresiaPremium;
 }

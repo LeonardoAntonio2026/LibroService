@@ -10,9 +10,14 @@ import mx.edu.utez.prestamoylibros.model.Prestamo.Prestamo;
 import mx.edu.utez.prestamoylibros.repository.LectorRepository;
 import mx.edu.utez.prestamoylibros.repository.LibroRepository;
 import mx.edu.utez.prestamoylibros.repository.PrestamoRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
+@Service
+@Transactional
 public class PrestamoService {
 
     final LibroRepository libroRepository;
@@ -29,7 +34,7 @@ public class PrestamoService {
     public Prestamo SolicitarPrestamo(SolicitarPrestamoDto dto){
         Lector lectorActual = lectorRepository.findById(dto.getIdLector()).orElseThrow(() -> new CustomException("No exsite un usuario con ese id"));
 
-        if(!lectorActual.getActivo()){
+        if(!lectorActual.isActivo()){
             throw new CustomException("El usuario no esta activo");
         }
 
@@ -39,10 +44,11 @@ public class PrestamoService {
             throw new CustomException("No hay suficientes ejemplares de ese libro");
         }
 
-        Prestamo[] prestamosUsuario = prestamoRepository.findByLector_Id(dto.getIdLector());
+        Prestamo[] prestamosActivos = prestamoRepository.findByLectorIdAndEstadoIn(dto.getIdLector(), List.of(Estado.PRESTADO, Estado.VENCIDO));
+        int limitePrestamos = lectorActual.isMembresiaPremium() ? 5 : 3;
 
-        if(prestamosUsuario.length > 3){
-            throw new CustomException("Este usuario tiene mas de 3 libros");
+        if(prestamosActivos.length >= limitePrestamos){
+            throw new CustomException("El lector ya tiene " + limitePrestamos + " prestamos activos");
         }
 
         libroPrestamo.setEjemplaresDisponibles(libroPrestamo.getEjemplaresDisponibles() -1 );
@@ -52,7 +58,7 @@ public class PrestamoService {
         nuevoPrestamo.setLibro(libroPrestamo);
         nuevoPrestamo.setEstado(Estado.PRESTADO);
         nuevoPrestamo.setFechaPrestamo(LocalDate.now());
-        nuevoPrestamo.setFechaDevolucionMaxima(LocalDate.now().plusDays(8));
+        nuevoPrestamo.setFechaDevolucionMaxima(LocalDate.now().plusDays(14));
 
         return prestamoRepository.save(nuevoPrestamo);
 
@@ -67,7 +73,6 @@ public class PrestamoService {
             libroActual.setEjemplaresDisponibles(libroActual.getEjemplaresDisponibles() + 1);
 
             if(prestamoActual.getFechaDevolucionMaxima().isBefore(LocalDate.now())){
-                prestamoActual.setEstado(Estado.VENCIDO);
                 Lector lectorActual = lectorRepository.findById(prestamoActual.getLector().getId()).orElseThrow(() -> new CustomException("No se encontro un lector"));
                 lectorActual.setActivo(false);
 
